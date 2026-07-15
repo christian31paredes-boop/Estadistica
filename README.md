@@ -1,0 +1,2 @@
+# Estadistica
+distribucion
