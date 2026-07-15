@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Busca las Cartas Doradas: Un juego interactivo de probabilidad utilizando la Distribución Hipergeométrica. Mezcla, roba 5 cartas sin reemplazo y analiza las estadísticas de inmediato.">
+    <title>Busca las Cartas Doradas - Distribución Hipergeométrica</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;800&family=Space+Grotesk:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Live Clock in the Corner -->
+    <div class="live-clock-container" id="live-clock">
+        <i class="fa-regular fa-clock"></i>
+        <span id="live-clock-time">14 de jul. de 2026, 21:19:25</span>
+    </div>
+
+    <!-- 3D Grid retro background -->
+    <div class="grid-container">
+        <div class="plane">
+            <div class="grid"></div>
+            <div class="glow"></div>
+        </div>
+        <div class="plane">
+            <div class="grid"></div>
+            <div class="glow"></div>
+        </div>
+    </div>
+
+    <main class="game-container">
+        <!-- Header -->
+        <header class="game-header">
+            <div class="logo-area">
+                <i class="fa-solid fa-wand-magic-sparkles logo-icon"></i>
+                <span class="badge">Probabilidad Aplicada</span>
+            </div>
+            <h1>Busca las Cartas Doradas</h1>
+            <p class="subtitle">Un juego interactivo de estadística donde el mazo se mezcla en cada ronda y se aplica
+                naturalmente la <strong>Distribución Hipergeométrica</strong> sin reemplazo.</p>
+        </header>
+
+        <!-- Stats Badges Bar (Configurables) -->
+        <section class="config-bar" aria-label="Configuración del Mazo">
+            <div class="config-card">
+                <span class="label">Población Total (N)</span>
+                <input type="number" id="param-N" value="30" min="2" max="100" class="config-input">
+            </div>
+            <div class="config-card gold-accent">
+                <span class="label">Éxitos en Población (K)</span>
+                <input type="number" id="param-K" value="8" min="1" max="100" class="config-input">
+            </div>
+            <div class="config-card normal-accent">
+                <span class="label">Fracasos en Población (N-K)</span>
+                <div style="margin-top: 0.25rem; display: flex; align-items: baseline; gap: 0.25rem;">
+                    <span class="value" id="val-NK" style="font-size: 1.5rem; font-weight: 700;">22</span>
+                    <span class="chart-desc"
+                        style="font-size: 0.8rem; margin: 0; display: inline-block;">Normales</span>
+                </div>
+            </div>
+            <div class="config-card draw-accent">
+                <span class="label">Tamaño de Muestra (n)</span>
+                <input type="number" id="param-n" value="5" min="1" max="15" class="config-input">
+            </div>
+        </section>
+
+        <!-- Main Layout Split -->
+        <div class="layout-grid">
+            <!-- Left Panel: Table, Deck and Deal area -->
+            <section class="board-panel" aria-label="Tablero de Juego">
+                <div class="card-table">
+                    <!-- Deck representation stack -->
+                    <div class="deck-container">
+                        <div class="deck-pile" id="deck-pile">
+                            <!-- Cards stacked visually -->
+                            <div class="deck-card card-back stack-1"></div>
+                            <div class="deck-card card-back stack-2"></div>
+                            <div class="deck-card card-back stack-3"></div>
+                            <div class="deck-card-top card-back">
+                                <div class="card-inner-pattern">
+                                    <i class="fa-solid fa-crown pattern-crown"></i>
+                                    <span class="deck-count-overlay" id="deck-counter">30</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="deck-info">
+                            <h3>Mazo de 30 Cartas</h3>
+                            <p>8 doradas, 22 normales</p>
+                        </div>
+                    </div>
+
+                    <!-- Deal zone -->
+                    <div class="hand-container" id="hand-container">
+                        <div class="empty-hand-placeholder" id="hand-placeholder">
+                            <i class="fa-regular fa-hand-pointer placeholder-icon"></i>
+                            <p>¡Haz clic en "Mezclar y Jugar" para robar 5 cartas!</p>
+                        </div>
+                        <!-- Cards drawn will be injected here dynamically -->
+                    </div>
+                </div>
+
+                <!-- Game Controls -->
+                <div class="game-controls">
+                    <button class="btn btn-primary" id="btn-draw">
+                        <span class="btn-glow-container">
+                            <span class="btn-glow-effect"></span>
+                        </span>
+                        <i class="fa-solid fa-shuffle"></i> Mezclar y Jugar
+                    </button>
+                    <button class="btn btn-secondary" id="btn-reset">
+                        <i class="fa-solid fa-rotate-left"></i> Reiniciar
+                    </button>
+                </div>
+            </section>
+
+            <!-- Right Panel: Probability, math and chart -->
+            <section class="stats-panel" aria-label="Estadísticas y Probabilidades">
+                <!-- Player Registration Box -->
+                <div class="glass-card registration-card" id="registration-card">
+                    <h2>
+                        <span><i class="fa-solid fa-users-gear"
+                                style="color: var(--color-accent-blue); margin-right: 0.5rem;"></i> Registro de
+                            Jugadores</span>
+                    </h2>
+                    <p class="chart-desc" style="margin-bottom: 1rem;">Registra los nombres de los participantes para
+                        llevar un control personalizado de sus partidas.</p>
+                    <div class="register-form">
+                        <input type="text" id="player-name-input" placeholder="Nombre del jugador..." maxlength="20"
+                            aria-label="Nombre del jugador">
+                        <button class="btn btn-accent" id="btn-register-player">
+                            <i class="fa-solid fa-user-plus"></i> Registrar
+                        </button>
+                    </div>
+                    <div class="active-player-display hidden" id="active-player-banner">
+                        <span>Jugando ahora: <strong id="active-player-name">Invitado</strong></span>
+                    </div>
+                    <div class="players-list-wrapper">
+                        <h3
+                            style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-main);">
+                            Jugadores Registrados
+                        </h3>
+                        <ol class="players-numbered-list" id="players-list">
+                            <li class="empty-list-msg">No hay jugadores registrados todavía.</li>
+                        </ol>
+                        <div class="registration-actions"
+                            style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; border-top: 1px solid var(--color-panel-border); padding-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                            <button class="btn-clear-history hidden" id="btn-clear-history" style="margin: 0;">
+                                <i class="fa-solid fa-trash-can"></i> Borrar Registro
+                            </button>
+                            <button class="btn-download-json hidden" id="btn-download-json">
+                                <i class="fa-solid fa-file-arrow-down"></i> Descargar JSON
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result Summary Box -->
+                <div class="glass-card result-box" id="result-box">
+                    <h2>
+                        <span>Último Resultado / Análisis Manual</span>
+                    </h2>
+
+                    <!-- Manual x control -->
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px dashed var(--color-panel-border); padding-bottom: 0.75rem; gap: 1rem;">
+                        <span class="chart-desc"
+                            style="margin: 0; font-size: 0.88rem; color: var(--color-text-main);">Evaluar éxitos de la
+                            muestra (x):</span>
+                        <input type="number" id="param-x" value="0" min="0" max="5" class="config-input"
+                            style="width: 75px; margin: 0; padding: 0.35rem 0.6rem; font-size: 1.15rem; text-align: center;">
+                    </div>
+
+                    <p class="no-games-yet">Aún no has jugado esta ronda. Mezcla el mazo y roba cartas para ver la
+                        estadística (o cambia x manualmente).</p>
+                    <div class="result-details hidden" id="result-details">
+                        <div class="result-stats">
+                            <div class="res-item gold">
+                                <span class="res-label">Éxitos Obtenidos (x)</span>
+                                <span class="res-value" id="res-x">0</span>
+                            </div>
+                            <div class="res-item">
+                                <span class="res-label">Fracasos Obtenidos (n-x)</span>
+                                <span class="res-value" id="res-nx">0</span>
+                            </div>
+                        </div>
+                        <div class="result-prob-desc">
+                            <span class="prob-tag">Probabilidad de obtener exactamente <strong id="desc-x">0</strong>
+                                éxitos (x):</span>
+                            <span class="prob-percentage" id="res-percentage">0.00%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom HTML Chart -->
+                <div class="glass-card chart-container">
+                    <h2>Distribución de Probabilidad</h2>
+                    <p class="chart-desc">Probabilidades de obtener x éxitos (cartas doradas) al extraer n cartas:</p>
+                    <div class="probability-chart" id="prob-chart">
+                        <!-- Bars dynamically filled by script -->
+                        <div class="chart-column" data-k="0">
+                            <div class="bar-wrapper">
+                                <div class="bar-value">18.48%</div>
+                                <div class="bar-fill" style="height: 0%"></div>
+                            </div>
+                            <div class="bar-label">0 Doradas</div>
+                        </div>
+                        <div class="chart-column" data-k="1">
+                            <div class="bar-wrapper">
+                                <div class="bar-value">41.07%</div>
+                                <div class="bar-fill" style="height: 0%"></div>
+                            </div>
+                            <div class="bar-label">1 Dorada</div>
+                        </div>
+                        <div class="chart-column" data-k="2">
+                            <div class="bar-wrapper">
+                                <div class="bar-value">30.26%</div>
+                                <div class="bar-fill" style="height: 0%"></div>
+                            </div>
+                            <div class="bar-label">2 Doradas</div>
+                        </div>
+                        <div class="chart-column" data-k="3">
+                            <div class="bar-wrapper">
+                                <div class="bar-value">9.08%</div>
+                                <div class="bar-fill" style="height: 0%"></div>
+                            </div>
+                            <div class="bar-label">3 Doradas</div>
+                        </div>
+                        <div class="chart-column" data-k="4">
+                            <div class="bar-wrapper">
+                                <div class="bar-value">1.08%</div>
+                                <div class="bar-fill" style="height: 0%"></div>
+                            </div>
+                            <div class="bar-label">4 Doradas</div>
+                        </div>
+                        <div class="chart-column" data-k="5">
+                            <div class="bar-wrapper">
+                                <div class="bar-value">0.04%</div>
+                                <div class="bar-fill" style="height: 0%"></div>
+                            </div>
+                            <div class="bar-label">5 Doradas</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LaTeX / HTML Styled Math Equations breakdown -->
+                <div class="glass-card math-card">
+                    <div class="math-header">
+                        <h2>Fórmula Hipergeométrica</h2>
+                        <i class="fa-solid fa-square-root-variable math-icon"></i>
+                    </div>
+                    <p class="math-intro">Calculado mediante la probabilidad hipergeométrica sin reemplazo:</p>
+
+                    <!-- General Formula -->
+                    <div class="formula-block general-formula">
+                        <div class="fraction-display">
+                            <span class="num">
+                                <span class="binomial"><span class="top">K</span><span class="bottom">x</span></span>
+                                <span class="binomial"><span class="top">N - K</span><span class="bottom">n -
+                                        x</span></span>
+                            </span>
+                            <span class="den">
+                                <span class="binomial"><span class="top">N</span><span class="bottom">n</span></span>
+                            </span>
+                        </div>
+                        <div class="formula-equals">
+                            <span>P(X = x) = </span>
+                        </div>
+                    </div>
+
+                    <!-- Legend explaining variable meanings -->
+                    <div class="formula-legend">
+                        <h3>Variables de la Fórmula:</h3>
+                        <ul class="legend-list">
+                            <li><span class="variable">N</span> <span class="arrow"><i
+                                        class="fa-solid fa-caret-right"></i></span> <span><strong>Tamaño de la
+                                        población</strong> (<span id="leg-N"
+                                        style="font-weight: 700; color: var(--color-text-main);">30</span> cartas en el
+                                    mazo).</span></li>
+                            <li><span class="variable">K</span> <span class="arrow"><i
+                                        class="fa-solid fa-caret-right"></i></span> <span><strong>Número de éxitos en la
+                                        población</strong> (<span id="leg-K"
+                                        style="font-weight: 700; color: var(--color-gold-bright);">8</span> cartas
+                                    doradas).</span></li>
+                            <li><span class="variable">N - K</span> <span class="arrow"><i
+                                        class="fa-solid fa-caret-right"></i></span> <span><strong>Número de fracasos en
+                                        la población</strong> (<span id="leg-NK"
+                                        style="font-weight: 700; color: var(--color-text-main);">22</span> cartas
+                                    normales. No existe sigla independiente).</span></li>
+                            <li><span class="variable">n</span> <span class="arrow"><i
+                                        class="fa-solid fa-caret-right"></i></span> <span><strong>Tamaño de la
+                                        muestra</strong> (<span id="leg-n"
+                                        style="font-weight: 700; color: var(--color-text-main);">5</span> cartas
+                                    extraídas sin reemplazo).</span></li>
+                            <li><span class="variable">x</span> <span class="arrow"><i
+                                        class="fa-solid fa-caret-right"></i></span> <span><strong>Número de éxitos
+                                        obtenidos en la muestra</strong> (<span id="leg-x"
+                                        style="font-weight: 700; color: var(--color-gold-bright);">x</span> cartas
+                                    doradas obtenidas).</span></li>
+                            <li><span class="variable">n - x</span> <span class="arrow"><i
+                                        class="fa-solid fa-caret-right"></i></span> <span><strong>Número de fracasos
+                                        obtenidos en la muestra</strong> (<span id="leg-nx"
+                                        style="font-weight: 700; color: var(--color-text-main);">n-x</span> cartas
+                                    normales obtenidas).</span></li>
+                        </ul>
+                    </div>
+
+                    <!-- Step by Step Calculation -->
+                    <div class="calculation-breakdown hidden" id="calc-breakdown">
+                        <h3>Desglose Matemático con tu resultado:</h3>
+                        <div class="step-arithmetic">
+                            <div class="formula-block substituted-formula">
+                                <span class="formula-step-label">Reemplazando:</span>
+                                <div class="fraction-display">
+                                    <span class="num">
+                                        <span class="binomial"><span class="top" id="math-top-K">8</span><span
+                                                class="bottom" id="math-x">x</span></span>
+                                        <span class="binomial"><span class="top" id="math-top-NK">22</span><span
+                                                class="bottom" id="math-nx">5-x</span></span>
+                                    </span>
+                                    <span class="den">
+                                        <span class="binomial"><span class="top" id="math-N-total">30</span><span
+                                                class="bottom" id="math-n-total">5</span></span>
+                                    </span>
+                                </div>
+                                <div class="formula-equals">
+                                    <span>P(X = <span id="math-val-x">x</span>) = </span>
+                                </div>
+                            </div>
+
+                            <div class="formula-block arithmetic-steps">
+                                <span class="formula-step-label">Calculando Combinaciones:</span>
+                                <div class="arith-grid">
+                                    <div class="arith-row">
+                                        <span class="arith-expr">C(<span id="math-C-K">8</span>, <span
+                                                id="math-c-x-n">x</span>)</span>
+                                        <span class="arith-arrow"><i class="fa-solid fa-right-long"></i></span>
+                                        <span class="arith-val" id="math-comb-1">1</span>
+                                    </div>
+                                    <div class="arith-row">
+                                        <span class="arith-expr">C(<span id="math-C-NK">22</span>, <span
+                                                id="math-c-nx-n">5-x</span>)</span>
+                                        <span class="arith-arrow"><i class="fa-solid fa-right-long"></i></span>
+                                        <span class="arith-val" id="math-comb-2">1</span>
+                                    </div>
+                                    <div class="arith-row">
+                                        <span class="arith-expr">C(<span id="math-C-N">30</span>, <span
+                                                id="math-C-n">5</span>)</span>
+                                        <span class="arith-arrow"><i class="fa-solid fa-right-long"></i></span>
+                                        <span class="arith-val" id="math-comb-total">142,506</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="formula-block final-fraction-block">
+                                <span class="formula-step-label">Resolviendo:</span>
+                                <div class="fraction-display">
+                                    <span class="num">
+                                        <span id="math-num-final-1">?</span> &times; <span
+                                            id="math-num-final-2">?</span>
+                                    </span>
+                                    <span class="den">
+                                        <span id="math-den-final-1">142506</span>
+                                    </span>
+                                </div>
+                                <div class="formula-equals">
+                                    <span>=</span>
+                                    <div class="fraction-display">
+                                        <span class="num"><span id="math-num-total">?</span></span>
+                                        <span class="den"><span id="math-den-final-2">142506</span></span>
+                                    </div>
+                                    <span>=</span>
+                                    <span class="final-dec" id="math-final-dec">0.0000</span>
+                                    <span class="final-pct-badge" id="math-final-pct">0.00%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 - Juego de Distribución Hipergeométrica. Diseñado con <i class="fa-solid fa-heart"
+                style="color: #ff3366;"></i> para Estudiantes de Estadística.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+
+</html>
